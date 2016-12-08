@@ -19,7 +19,7 @@
 
 ## TODO: remove when finished
 # from instrument import Instrument
-# from time import time, sleep
+from time import time, sleep
 import visa
 # import types
 import logging
@@ -59,28 +59,31 @@ class OxfordInstruments_ILM200(VisaInstrument):
         logging.debug(__name__ + ' : Initializing instrument')
         super().__init__(name, address, **kwargs)
 
-        self.visa_handle.set_visa_attribute(visa.constants.VI_ATTR_ASRL_STOP_BITS, visa.constants.VI_ASRL_STOP_TWO)
+		# TODO: make write and read command based on IVVI
+        self.visa_handle.set_visa_attribute(visa.constants.VI_ATTR_ASRL_STOP_BITS,
+											visa.constants.VI_ASRL_STOP_TWO)
         self._address = address
         self._number = number
-        # self._visainstrument = visa.SerialInstrument(self._address)
         self._values = {}
-        # self._visainstrument.stop_bits = 2
         
-        #Add parameters
         self.add_parameter('level',
-                           label='level',
-                           get_cmd=self._do_get_level,
-                           units='percent')
-                           # vals=
-                           # type=types.FloatType,
-            # flags=Instrument.FLAG_GET)
+						   label='level',
+						   get_cmd=self._do_get_level,
+						   delay=0.02,
+						   units='%')
         # self.add_parameter('status', type=types.StringType,
             # flags=Instrument.FLAG_GET)
 
         # # Add functions
         # self.add_function('get_all')
         # self.get_all()
-    def get_all(self):
+
+	def get_idn(self):
+		"""
+		"""
+		return self._get_version
+
+	def get_all(self):
         """
         Reads all implemented parameters from the instrument,
         and updates the wrapper.
@@ -94,11 +97,10 @@ class OxfordInstruments_ILM200(VisaInstrument):
         logging.info(__name__ + ' : reading all settings from instrument')
         self.get_level()
         self.get_status()
-        
-    # Functions
+
     def _execute(self, message):
         """
-        Write a command to the device
+        Write a command to the device and read answer.
         
         Input:
             message (str) : write command for the device
@@ -107,16 +109,30 @@ class OxfordInstruments_ILM200(VisaInstrument):
             None
         """
         logging.info(__name__ + ' : Send the following command to the device: %s' %message)
-        # self._visainstrument.write('@%s%s' %(self._number, message))
-        result = self.ask('@%s%s' %(self._number, message))
-        # sleep(20e-3) # wait for the device to be able to respond
-        # result = self._visainstrument.read()
+        self.visa_handle.write_raw('@%s%s' %(self._number, message))
+        sleep(20e-3) # wait for the device to be able to respond
+        result = self._read()
         if result.find('?') >= 0:
             print("Error: Command %s not recognized" %message)
         else:
             return result
 
-    def identify(self):
+	def _read(self):
+        # because protocol has no termination chars the read reads the number
+        # of bytes in the buffer
+        bytes_in_buffer = self.visa_handle.bytes_in_buffer
+        # a workaround for a timeout error in the pyvsia read_raw() function
+        with(self.visa_handle.ignore_warning(visa.constants.VI_SUCCESS_MAX_CNT)):
+            mes = self.visa_handle.visalib.read(
+                self.visa_handle.session, bytes_in_buffer)
+        mes = mes[0]  # cannot be done on same line for some reason
+        # if mes[1] != 0:
+        #     # see protocol descriptor for error codes
+        #     raise Exception('IVVI rack exception "%s"' % mes[1])
+		return mes
+
+	# Functions: Monitor commands
+    def _get_version(self):
         """
         Identify the device
         
@@ -128,6 +144,53 @@ class OxfordInstruments_ILM200(VisaInstrument):
         """
         logging.info(__name__ + ' : Identify the device')
         return self._execute('V')
+
+	def _do_get_level(self):
+        """
+        Get Helium level of channel 1.
+        Input:
+            None
+        
+        Output:
+            result (float) : Helium level
+        """
+        logging.info(__name__ + ' : Read level of channel 1')
+        result = self._execute('R1')
+        return float(result.replace('R',''))
+
+    def _do_get_status(self):
+        """
+        Get status of the device.
+        Input:
+            None
+            
+        Output:
+            None
+        """
+        logging.info(__name__ + ' : Get status of the device.')
+        result = self._execute('X')
+        usage = {
+        0 : "Channel not in use",
+        1 : "Channel used for Nitrogen level",
+        2 : "Channel used for Helium Level (Normal pulsed operation)",
+        3 : "Channel used for Helium Level (Continuous measurement)",
+        9 : "Error on channel (Usually means probe unplugged)"
+        }
+        # current_flowing = {
+        # 0 : "Curent not flowing in Helium Probe Wire",
+        # 1 : "Curent not flowing in Helium Probe Wire"
+        # }
+        # rate = {
+        # 10 : "Helium Probe in FAST rate",
+        # 01 : "Helium Probe in SLOW rate"
+        # }
+        # auto_fill_status = {
+        # 00 : "End Fill (Level > FULL)",
+        # 01 : "Not Filling (Level < FULL, Level > FILL)",
+        # 10 : "Filling (Level < FULL, Level > FILL)",
+        # 11 : "Start Filling (Level < FILL)"
+        # }
+        return usage.get(int(result[1]), "Unknown")
 
     def remote(self):
         """
@@ -178,35 +241,17 @@ class OxfordInstruments_ILM200(VisaInstrument):
         logging.info(__name__ + ' : Setting remote control status to %s' %status.get(mode,"Unknown"))
         self._execute('C%s' %mode)
 
-    def _do_get_level(self):
-        """
-        Get Helium level of channel 1.
-        Input:
-            None
-        
-        Output:
-            result (float) : Helium level
-        """
-        logging.info(__name__ + ' : Read level of channel 1')
-        result = self._execute('R1')
-        return float(result.replace('R',''))
+    # Functions: Control commands (only recognised when in REMOTE control)
+	def set_to_slow(self):
+		"""
+		Set helium meter channel 1 to slow mode.
+		"""
+		logging.info(__name__ + ' : Setting Helium Probe in SLOW rate')
+		self._execute('S1')
 
-    def _do_get_status(self):
-        """
-        Get status of the device.
-        Input:
-            None
-            
-        Output:
-            None
-        """
-        logging.info(__name__ + ' : Get status of the device.')
-        result = self._execute('X')
-        status = {
-        0 : "Channel not in use",
-        1 : "Channel used for Nitrogen level",
-        2 : "Channel used for Helium Level (Normal pulsed operation)",
-        3 : "Channel used for Helium Level (Continuous measurement)",
-        9 : "Error on channel (Usually means probe unplugged)"
-        }
-        return status.get(int(result[1]), "Unknown")
+	def set_to_fast(self):
+		"""
+		Set helium meter channel 1 to fast mode.
+		"""
+		logging.info(__name__ + ' : Setting Helium Probe in FAST rate')
+		self._execute('T1')
