@@ -78,12 +78,13 @@ class OxfordInstruments_ILM200(VisaInstrument):
         # self.add_function('get_all')
         # self.get_all()
 
-	def get_idn(self):
-		"""
-		"""
-		return self._get_version
+    def get_idn(self):
+        """
+        """
+        pass
+        return self._get_version
 
-	def get_all(self):
+    def get_all(self):
         """
         Reads all implemented parameters from the instrument,
         and updates the wrapper.
@@ -117,7 +118,7 @@ class OxfordInstruments_ILM200(VisaInstrument):
         else:
             return result
 
-	def _read(self):
+    def _read(self):
         # because protocol has no termination chars the read reads the number
         # of bytes in the buffer
         bytes_in_buffer = self.visa_handle.bytes_in_buffer
@@ -129,9 +130,9 @@ class OxfordInstruments_ILM200(VisaInstrument):
         # if mes[1] != 0:
         #     # see protocol descriptor for error codes
         #     raise Exception('IVVI rack exception "%s"' % mes[1])
-		return mes
+        return mes
 
-	# Functions: Monitor commands
+    # Functions: Monitor commands
     def _get_version(self):
         """
         Identify the device
@@ -145,7 +146,7 @@ class OxfordInstruments_ILM200(VisaInstrument):
         logging.info(__name__ + ' : Identify the device')
         return self._execute('V')
 
-	def _do_get_level(self):
+    def _do_get_level(self):
         """
         Get Helium level of channel 1.
         Input:
@@ -242,16 +243,16 @@ class OxfordInstruments_ILM200(VisaInstrument):
         self._execute('C%s' %mode)
 
     # Functions: Control commands (only recognised when in REMOTE control)
-	def set_to_slow(self):
-		"""
-		Set helium meter channel 1 to slow mode.
-		"""
-		logging.info(__name__ + ' : Setting Helium Probe in SLOW rate')
-		self._execute('S1')
+    def set_to_slow(self):
+        """
+        Set helium meter channel 1 to slow mode.
+        """
+        logging.info(__name__ + ' : Setting Helium Probe in SLOW rate')
+        self._execute('S1')
 
-	def set_to_fast(self):
-		"""
-		Set helium meter channel 1 to fast mode.
-		"""
-		logging.info(__name__ + ' : Setting Helium Probe in FAST rate')
-		self._execute('T1')
+    def set_to_fast(self):
+        """
+        Set helium meter channel 1 to fast mode.
+        """
+        logging.info(__name__ + ' : Setting Helium Probe in FAST rate')
+        self._execute('T1')
