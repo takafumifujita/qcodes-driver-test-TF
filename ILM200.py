@@ -78,27 +78,6 @@ class OxfordInstruments_ILM200(VisaInstrument):
         # self.add_function('get_all')
         # self.get_all()
 
-    def get_idn(self):
-        """
-        """
-        pass
-        return self._get_version
-
-    def get_all(self):
-        """
-        Reads all implemented parameters from the instrument,
-        and updates the wrapper.
-
-        Input:
-            None
-
-        Output:
-            None
-        """
-        logging.info(__name__ + ' : reading all settings from instrument')
-        self.get_level()
-        self.get_status()
-
     def _execute(self, message):
         """
         Write a command to the device and read answer.
@@ -131,6 +110,27 @@ class OxfordInstruments_ILM200(VisaInstrument):
         #     # see protocol descriptor for error codes
         #     raise Exception('IVVI rack exception "%s"' % mes[1])
         return mes
+
+    def get_idn(self):
+        """
+        """
+        pass
+        return self._get_version
+
+    def get_all(self):
+        """
+        Reads all implemented parameters from the instrument,
+        and updates the wrapper.
+
+        Input:
+            None
+
+        Output:
+            None
+        """
+        logging.info(__name__ + ' : reading all settings from instrument')
+        self.get_level()
+        self.get_status()
 
     # Functions: Monitor commands
     def _get_version(self):
