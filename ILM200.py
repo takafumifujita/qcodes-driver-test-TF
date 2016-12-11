@@ -18,6 +18,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 ## TODO: remove when finished
+##      choose how to remote control
+##      choose how to set to slow or fast
 # from instrument import Instrument
 from time import time, sleep
 import visa
@@ -61,16 +63,15 @@ class OxfordInstruments_ILM200(VisaInstrument):
 
 		# TODO: make write and read command based on IVVI
         self.visa_handle.set_visa_attribute(visa.constants.VI_ATTR_ASRL_STOP_BITS,
-											visa.constants.VI_ASRL_STOP_TWO)
+                                            visa.constants.VI_ASRL_STOP_TWO)
         self._address = address
         self._number = number
         self._values = {}
         
         self.add_parameter('level',
-						   label='level',
-						   get_cmd=self._do_get_level,
-						   delay=0.02,
-						   units='%')
+                           label='level',
+                           get_cmd=self._do_get_level,
+                           units='%')
         # self.add_parameter('status', type=types.StringType,
             # flags=Instrument.FLAG_GET)
 
@@ -89,8 +90,8 @@ class OxfordInstruments_ILM200(VisaInstrument):
             None
         """
         logging.info(__name__ + ' : Send the following command to the device: %s' %message)
-        self.visa_handle.write_raw('@%s%s' %(self._number, message))
-        sleep(20e-3) # wait for the device to be able to respond
+        self.visa_handle.write('@%s%s' %(self._number, message))
+        sleep(50e-3) # wait for the device to be able to respond
         result = self._read()
         if result.find('?') >= 0:
             print("Error: Command %s not recognized" %message)
@@ -104,8 +105,8 @@ class OxfordInstruments_ILM200(VisaInstrument):
         # a workaround for a timeout error in the pyvsia read_raw() function
         with(self.visa_handle.ignore_warning(visa.constants.VI_SUCCESS_MAX_CNT)):
             mes = self.visa_handle.visalib.read(
-                self.visa_handle.session, bytes_in_buffer)
-        mes = mes[0]  # cannot be done on same line for some reason
+                  self.visa_handle.session, bytes_in_buffer)
+        mes = str(mes[0].decode())  # cannot be done on same line for some reason
         # if mes[1] != 0:
         #     # see protocol descriptor for error codes
         #     raise Exception('IVVI rack exception "%s"' % mes[1])
@@ -157,7 +158,7 @@ class OxfordInstruments_ILM200(VisaInstrument):
         """
         logging.info(__name__ + ' : Read level of channel 1')
         result = self._execute('R1')
-        return float(result.replace('R',''))
+        return float(result.replace("R",""))/10
 
     def _do_get_status(self):
         """
