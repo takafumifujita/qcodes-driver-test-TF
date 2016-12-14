@@ -72,12 +72,16 @@ class OxfordInstruments_ILM200(VisaInstrument):
                            label='level',
                            get_cmd=self._do_get_level,
                            units='%')
-        # self.add_parameter('status', type=types.StringType,
-            # flags=Instrument.FLAG_GET)
-
-        # # Add functions
-        # self.add_function('get_all')
-        # self.get_all()
+        self.add_parameter('status',
+                           get_cmd=self._do_get_status)
+        
+        try:
+            self._read() # to flush the buffer
+            # TODO: Fix the initial error?
+#            self.level.get() # to work around the error that comes out for the first execute
+#            self.level.get() # to work around the error that comes out for the first execute
+        except:
+            pass
 
     def _execute(self, message):
         """
@@ -91,7 +95,7 @@ class OxfordInstruments_ILM200(VisaInstrument):
         """
         logging.info(__name__ + ' : Send the following command to the device: %s' %message)
         self.visa_handle.write('@%s%s' %(self._number, message))
-        sleep(50e-3) # wait for the device to be able to respond
+        sleep(70e-3) # wait for the device to be able to respond
         result = self._read()
         if result.find('?') >= 0:
             print("Error: Command %s not recognized" %message)
@@ -114,9 +118,31 @@ class OxfordInstruments_ILM200(VisaInstrument):
 
     def get_idn(self):
         """
+        Overides the function of Instrument since ILM does not support '*IDN?'
+        
+        This string is supposed to be a
+        comma-separated list of vendor, model, serial, and firmware, but
+        semicolon and colon are also common separators so we accept them here
+        as well.
+
+        Returns:
+            A dict containing vendor, model, serial, and firmware.
         """
-        pass
-        return self._get_version
+        try:
+            idstr = ''  # in case self.ask fails
+            idstr = self._get_version().split()
+            # form is supposed to be comma-separated, but we've seen
+            # other separators occasionally
+            idparts = [idstr[3] + ' ' + idstr[4], idstr[0], idstr[5],
+                       idstr[1] + ' ' + idstr[2]]
+            # in case parts at the end are missing, fill in None
+            if len(idparts) < 4:
+                idparts += [None] * (4 - len(idparts))
+        except:
+            logging.warn('Error getting or interpreting *IDN?: ' + repr(idstr))
+            idparts = [None, None, None, None]
+
+        return dict(zip(('vendor', 'model', 'serial', 'firmware'), idparts))
 
     def get_all(self):
         """
@@ -130,8 +156,8 @@ class OxfordInstruments_ILM200(VisaInstrument):
             None
         """
         logging.info(__name__ + ' : reading all settings from instrument')
-        self.get_level()
-        self.get_status()
+        self.level.get()
+        self.status.get()
 
     # Functions: Monitor commands
     def _get_version(self):
@@ -142,7 +168,7 @@ class OxfordInstruments_ILM200(VisaInstrument):
             None
             
         Output:
-            None
+            'ILM200 Version 1.08 (c) OXFORD 1994\r'
         """
         logging.info(__name__ + ' : Identify the device')
         return self._execute('V')
