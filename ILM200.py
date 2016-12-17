@@ -17,20 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-## TODO: remove when finished
-##      choose how to remote control
-##      choose how to set to slow or fast
-# from instrument import Instrument
 from time import time, sleep
 import visa
-# import types
 import logging
-# import numpy
-# import struct
-
-
 from qcodes import VisaInstrument
-from qcodes import validators as vals
 
 class OxfordInstruments_ILM200(VisaInstrument):
     """
@@ -61,7 +51,6 @@ class OxfordInstruments_ILM200(VisaInstrument):
         logging.debug(__name__ + ' : Initializing instrument')
         super().__init__(name, address, **kwargs)
 
-		# TODO: make write and read command based on IVVI
         self.visa_handle.set_visa_attribute(visa.constants.VI_ATTR_ASRL_STOP_BITS,
                                             visa.constants.VI_ASRL_STOP_TWO)
         self._address = address
@@ -89,7 +78,8 @@ class OxfordInstruments_ILM200(VisaInstrument):
 
     def _execute(self, message):
         """
-        Write a command to the device and read answer.
+        Write a command to the device and read answer. This function writes to
+        the buffer by adding the device number at the front, instead of 'ask'.
         
         Input:
             message (str) : write command for the device
@@ -107,6 +97,15 @@ class OxfordInstruments_ILM200(VisaInstrument):
             return result
 
     def _read(self):
+        """
+        Reads the total bytes in the buffer and outputs as a string.
+        
+        Input:
+            None
+
+        Output:
+            message (str)
+        """
         # because protocol has no termination chars the read reads the number
         # of bytes in the buffer
         bytes_in_buffer = self.visa_handle.bytes_in_buffer
@@ -162,6 +161,15 @@ class OxfordInstruments_ILM200(VisaInstrument):
         logging.info(__name__ + ' : reading all settings from instrument')
         self.level.get()
         self.status.get()
+        self.rate.get()
+
+    def close(self):
+        """
+        Safely close connection
+        """
+        logging.info(__name__ + ' : Closing ILM200 connection')
+        self.local()
+        super().close()
 
     # Functions: Monitor commands
     def _get_version(self):
