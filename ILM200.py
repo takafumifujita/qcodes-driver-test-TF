@@ -74,14 +74,18 @@ class OxfordInstruments_ILM200(VisaInstrument):
                            units='%')
         self.add_parameter('status',
                            get_cmd=self._do_get_status)
+        self.add_parameter('rate',
+                           get_cmd=self._do_get_rate,
+                           set_cmd=self._do_set_rate)
         
+        # a dummy command to avoid the initial error
         try:
+            self.get_idn()
+            sleep(70e-3) # wait for the device to be able to respond
             self._read() # to flush the buffer
-            # TODO: Fix the initial error?
-#            self.level.get() # to work around the error that comes out for the first execute
-#            self.level.get() # to work around the error that comes out for the first execute
         except:
             pass
+
 
     def _execute(self, message):
         """
@@ -208,10 +212,6 @@ class OxfordInstruments_ILM200(VisaInstrument):
         # 0 : "Curent not flowing in Helium Probe Wire",
         # 1 : "Curent not flowing in Helium Probe Wire"
         # }
-        # rate = {
-        # 10 : "Helium Probe in FAST rate",
-        # 01 : "Helium Probe in SLOW rate"
-        # }
         # auto_fill_status = {
         # 00 : "End Fill (Level > FULL)",
         # 01 : "Not Filling (Level < FULL, Level > FILL)",
@@ -219,6 +219,25 @@ class OxfordInstruments_ILM200(VisaInstrument):
         # 11 : "Start Filling (Level < FILL)"
         # }
         return usage.get(int(result[1]), "Unknown")
+
+    def _do_get_rate(self):
+        """
+        Get helium meter channel 1 probe rate
+        
+        Input:
+            None
+            
+        Output:
+            rate(int) :
+            0 : "SLOW"
+            1 : "FAST"
+        """
+        rate = {
+        1 : "1 : Helium Probe in FAST rate",
+        0 : "0 : Helium Probe in SLOW rate"
+        }
+        result = self._execute('X')
+        return rate.get(int(format(int(result[5:7]),'08b')[6]), "Unknown")
 
     def remote(self):
         """
@@ -274,12 +293,33 @@ class OxfordInstruments_ILM200(VisaInstrument):
         """
         Set helium meter channel 1 to slow mode.
         """
+        self.set_remote_status(1)
         logging.info(__name__ + ' : Setting Helium Probe in SLOW rate')
         self._execute('S1')
+        self.set_remote_status(3)
 
     def set_to_fast(self):
         """
         Set helium meter channel 1 to fast mode.
         """
+        self.set_remote_status(1)
         logging.info(__name__ + ' : Setting Helium Probe in FAST rate')
         self._execute('T1')
+        self.set_remote_status(3)
+
+    def _do_set_rate(self, rate):
+        """
+        Set helium meter channel 1 probe rate
+        
+        Input:
+            rate(int) :
+            0 : "SLOW"
+            1 : "FAST"
+        """
+        self.set_remote_status(1)
+        if rate == 0:
+            self.set_to_slow()
+        elif rate == 1:
+            self.set_to_fast()
+        self.set_remote_status(3)
+        print(self._do_get_rate())

@@ -24,3 +24,8 @@ import qcodes.instrument_drivers.oxford.ILM200 as ILM200
 server_name = None
 
 helium = ILM200.OxfordInstruments_ILM200(name='helium', address='ASRL4::INSTR', server_name=server_name)
+
+#%%
+
+self = helium
+self.visa_handle.bytes_in_buffer
