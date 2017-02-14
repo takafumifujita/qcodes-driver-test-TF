@@ -16,17 +16,15 @@ from qcodes.plots.qcmatplotlib import MatPlot
 from qtt.live_plotting import livePlot, fpgaCallback_2d
 
 #%% set directory for data saving
-datadir = r'K:\ns\qt\spin-qubits\data\b057_data\2016 3dot experiment\data'
+datadir = r'K:\ns\qt\spin-qubits\data\b057_data\2017 3dot Automation\data'
 qcodes.DataSet.default_io = qcodes.DiskIO(datadir)
-qcodes.DataSet.default_formatter = qcodes.data.hdf5_format.HDF5Format()
+qcodes.DataSet.default_formatter = qcodes.data.gnuplot_format.GNUPlotFormat()
 
 #%% initialize station
 remote = False
 
 if __name__=='__main__':
     server_name = None
-    if remote == True:
-        server_name = 'server%d' % (int(1000*np.random.rand()))
     station = triple_dot.initialize(server_name=server_name)
     awg = station.awg
     fpga = station.fpga
@@ -35,8 +33,8 @@ if __name__=='__main__':
     keithley1 = station.keithley1
     keithley2 = station.keithley2
     keithley3 = station.keithley3
-    siggen = station.siggen
-    helium = station.helium
+#    siggen = station.siggen
+#    helium = station.helium
 
 #%% initialize sensing dot
 import qtt.structures
@@ -64,8 +62,12 @@ from collections import OrderedDict
 #R_sweep = {'P1': .21, 'P2': .654, 'P3': 1}
 
 ## result of capacitance measurement
+# new tuning at 000-111
+#L = OrderedDict([('P1', 1), ('P2', .481), ('P3', .194), ('D1', 1.224), ('D2', .380), ('LS', 0.843), ('RS', .110)])
+#M = OrderedDict([('P1', .560), ('P2', 1), ('P3', .414), ('D1', 1.295), ('D2', .942), ('LS', .330), ('RS', .269)])
+#R = OrderedDict([('P1', .208), ('P2', .503), ('P3', 1.25), ('D1', .394), ('D2', 1.189), ('LS', .073), ('RS', 0.914)])
 L = OrderedDict([('P1', 1), ('P2', .481), ('P3', .194), ('D1', 1.224), ('D2', .380), ('LS', 0.843), ('RS', .110)])
-M = OrderedDict([('P1', .560), ('P2', 1), ('P3', .414), ('D1', 1.295), ('D2', .942), ('LS', .330), ('RS', .269)])
+M = OrderedDict([('P1', .540), ('P2', 1), ('P3', .414), ('D1', 1.295), ('D2', .942), ('LS', .330), ('RS', .269)])
 R = OrderedDict([('P1', .208), ('P2', .503), ('P3', 1.25), ('D1', .394), ('D2', 1.189), ('LS', .073), ('RS', 0.914)])
 t1 = OrderedDict([('P1', 0), ('P2', 0), ('P3', 0), ('D1', 1), ('D2', 0), ('LS', 0), ('RS', 0)])
 t2 = OrderedDict([('P1', 0), ('P2', 0), ('P3', 0), ('D1', 0), ('D2', 1), ('LS', 0), ('RS', 0)])
@@ -92,6 +94,12 @@ for i in range(3):
     mu_L_inv[list(L_sweep.keys())[i]] = np.dot(cc_sweep_inv, np.array([1,0,0]))[i]
     mu_M_inv[list(M_sweep.keys())[i]] = np.dot(cc_sweep_inv, np.array([0,1,0]))[i]
     mu_R_inv[list(R_sweep.keys())[i]] = np.dot(cc_sweep_inv, np.array([0,0,1]))[i]
+
+# virtual P1+P2 gate
+Dot_LR = {'P1': mu_L_inv['P1'] + mu_M_inv['P1'],
+          'P2': mu_L_inv['P2'] + mu_M_inv['P2'],
+          'P3': mu_L_inv['P3'] + mu_M_inv['P3']}
+
 
 # dot gate dictionary for epsilon, delta, and mu
 Dot_epsilon = dict()
@@ -211,7 +219,8 @@ from imp import reload
 reload(qtt.scans)
 from qtt.scans import scan2Dfast
 
-scangates = ['P2','P3']
+#scangates = ['P2','P3']
+scangates = ['P1','P2','P3']
 gatevals = gates.allvalues()
 gg = [gates.get(scangates[0]), gates.get(scangates[1])]
 activegates = ['P1','P2','P3','D1','D2','LS','RS','SDP','SDR','SDL','T']
@@ -222,13 +231,14 @@ if __name__ == '__main__' and 1:
     stepgateval = stepgate.get()
     plot = MatPlot(interval=0)
     delay = 0.1
-    scanjob = dict({'sweepdata': dict({'gate': scangates[1], 'start': gg[1] - 50, 'end': gg[1] + 50, 'step': 2.}), 'delay': delay})
-    scanjob['stepdata'] = dict({'gate': scangates[0], 'start': gg[0] + 50, 'end': gg[0] - 50, 'step': -2})
+    scanjob = dict({'sweepdata': dict({'gate': scangates[1], 'start': gg[1] - 40, 'end': gg[1] + 40, 'step': 2.}), 'delay': delay})
+    scanjob['stepdata'] = dict({'gate': scangates[0], 'start': gg[0] + 80, 'end': gg[0] - 80, 'step': -2})
     scanjob['sd'] = sd
     scanjob['sweepdata']['period'] = .5e-3
-    scanjob['gates_horz'] = {'P2':1, 'P3': 0}
-    scanjob['gates_vert'] = {'P2':0, 'P3': 1}
-#    scanjob['gates_horz'] = mu_R_inv
+#    scanjob['gates_horz'] = {'P2':1, 'P3': 0}
+#    scanjob['gates_vert'] = {'P2':0, 'P3': 1}
+    scanjob['gates_horz'] = mu_R_inv
+    scanjob['gates_horz'] = {'P1': 0.0066602222076373452*2, 'P2': -0.40117006534666505*2, 'P3': 0.96032257332014703*2} # mu_R_inv * const
 #    scanjob['gates_vert'] = mu_M_inv
 #    scanjob['gates_horz'] = Dot_epsilon
 #    scanjob['gates_vert'] = Dot_mu
@@ -241,6 +251,7 @@ if __name__ == '__main__' and 1:
 #    scanjob['gates_vert'] = {'P1':1, 'P2':0.5, 'P3':1}
 #    scanjob['gates_horz'] = {'P1': 1, 'P3': -1}
 #    scanjob['gates_vert'] = {'P1': .5, 'P2': .5, 'P3': .5}
+    scanjob['gates_vert'] = Dot_t_R
     scanjob['fpga_samp_freq'] = fpga.get_sampling_frequency()
     diff_dir = 'xy'
 
@@ -454,19 +465,21 @@ if __name__=='__main__':
 #%% videomode tuning with virtual gates
 if __name__=='__main__':
     sweepgates = ['P1','P3']
-    gates_horz = {'P1':1, 'P3': -1.25}
-    gates_vert = {'P1':1, 'P2':.5, 'P3':0.8}
-#    gates_horz = {'P1': 1, 'P3': -.2}
-#    gates_vert = {'P3': 1, 'P1': -.2}
-    gates_horz = {'P1': 1, 'P3': -1.25}
-    gates_vert = {'P1': -.5, 'P2': 1, 'P3': -.4}
-    gates_horz = {'P1': 1, 'P2': 0}
-    gates_vert = {'P1': 0, 'P3': 1}
-#    gates_horz = mu_R_inv
-#    gates_vert = mu_M_inv
-    gates_horz = Dot_epsilon
-    gates_vert = Dot_mu
+#    gates_horz = {'P1':1, 'P3': -1.25}
+#    gates_vert = {'P1':1, 'P2':.5, 'P3':0.8}
+##    gates_horz = {'P1': 1, 'P3': -.2}
+##    gates_vert = {'P3': 1, 'P1': -.2}
+#    gates_horz = {'P1': 1, 'P3': -1.25}
+#    gates_vert = {'P1': -.5, 'P2': 1, 'P3': -.4}
+#    gates_horz = {'P1': 1, 'P2': 0}
+#    gates_vert = {'P1': 0, 'P3': 1}
+##    gates_horz = mu_R_inv
+    gates_horz = mu_R_inv
+    gates_vert = Dot_LR
+#    gates_horz = Dot_epsilon
+#    gates_vert = Dot_mu
     sweepranges = [90, 140]
+    sweepranges = [140, 90]
     resolution = [90,90]
     Naverage = 25
     fpga_ch = 1
@@ -599,10 +612,12 @@ gates.P2.set(gates.P2.get()+Dot_epsilon['P2']*x)
 gates.P3.set(gates.P3.get()+Dot_epsilon['P3']*x)
 
 #%% mu
-x = 10
+x = -10
 gates.P1.set(gates.P1.get()+Dot_mu['P1']*x)
 gates.P2.set(gates.P2.get()+Dot_mu['P2']*x)
 gates.P3.set(gates.P3.get()+Dot_mu['P3']*x)
+gates.SDP.set(gates.SDP.get() - 0.15*x)
+
 
 #%% tuning t1
 x = 40
@@ -613,7 +628,7 @@ gates.P3.set(gates.P3.get()+Dot_t1['P3']*x)
 gates.allvalues()
 
 #%% tuning t2
-x = -10
+x = 10
 gates.D2.set(gates.D2.get()+Dot_t2['D2']*x)
 gates.P1.set(gates.P1.get()+Dot_t2['P1']*x)
 gates.P2.set(gates.P2.get()+Dot_t2['P2']*x)
@@ -621,7 +636,7 @@ gates.P3.set(gates.P3.get()+Dot_t2['P3']*x)
 gates.allvalues()
 
 #%% tuning t_L
-x = 20
+x = -20
 gates.LS.set(gates.LS.get()+Dot_t_L['LS']*x)
 gates.P1.set(gates.P1.get()+Dot_t_L['P1']*x)
 gates.P2.set(gates.P2.get()+Dot_t_L['P2']*x)
@@ -629,18 +644,36 @@ gates.P3.set(gates.P3.get()+Dot_t_L['P3']*x)
 gates.allvalues()
 
 #%% tuning t_R
-x = -20
+x = 80
 gates.RS.set(gates.RS.get()+Dot_t_R['RS']*x)
 gates.P1.set(gates.P1.get()+Dot_t_R['P1']*x)
 gates.P2.set(gates.P2.get()+Dot_t_R['P2']*x)
 gates.P3.set(gates.P3.get()+Dot_t_R['P3']*x)
 gates.allvalues()
 
-#%% sensing dot
+#%% L
 x = -5
+gates.P1.set(gates.P1.get()+mu_L_inv['P1']*x)
+gates.P2.set(gates.P2.get()+mu_L_inv['P2']*x)
+gates.P3.set(gates.P3.get()+mu_L_inv['P3']*x)
+
+#%% M
+x = -10
+gates.P1.set(gates.P1.get()+mu_M_inv['P1']*x)
+gates.P2.set(gates.P2.get()+mu_M_inv['P2']*x)
+gates.P3.set(gates.P3.get()+mu_M_inv['P3']*x)
+
+#%% R
+x = 30
+gates.P1.set(gates.P1.get()+mu_R_inv['P1']*x)
+gates.P2.set(gates.P2.get()+mu_R_inv['P2']*x)
+gates.P3.set(gates.P3.get()+mu_R_inv['P3']*x)
+
+#%% sensing dot
+x = -3
 gates.SDP.set(gates.SDP.get() + x)
 
-#%%
+#%% LS,RS?
 x = 5
 gates.P1.set(gates.P1.get()-x)
 gates.P2.set(gates.P2.get()+.6*x)
@@ -669,15 +702,6 @@ gates.SDP.set(gates.SDP.get()-x)
 gates.SDL.set(gates.SDL.get()-x)
 
 #%%
-x = 10
-gates.RS.set(gates.RS.get()+x)
-gates.P3.set(gates.P3.get()-x)
-#%%
-x = 10
-gates.LS.set(gates.LS.get()+x)
-gates.P1.set(gates.P1.get()-x)
-
-#%%
 x = -10
 gates.D2.set(gates.D2.get()+x)
 gates.P2.set(gates.P2.get()-x/2)
@@ -700,29 +724,32 @@ gates.P3.set(gates.P3.get()-x/2)
 #
 #ValueError: could not broadcast input array from shape (462) into shape (16)
 
-#%%
-basevalues = {'D1': -19.317921721217544,
- 'D2': -109.40718699931335,
- 'LS': -274.44876783398172,
+#%% voltages to reset to
+basevalues = {'D1': 0.030518043793335892,
+ 'D2': 0.030518043793335892,
+ 'LS': 0.030518043793335892,
  'LS_fine': 0.030518043793335892,
- 'P1': 35.858701457236521,
+ 'P1': 0.030518043793335892,
  'P1_fine': 0.21362630655380599,
- 'P2': -67.353322652018051,
+ 'P2': 0.030518043793335892,
  'P2_fine': 1.0070954451819034,
- 'P3': -189.05928130006873,
+ 'P3': 0.030518043793335892,
  'P3_fine': 4.242008087281647,
  'QPC': 0.030518043793335892,
- 'RS': -169.40566109712381,
+ 'RS': 0.030518043793335892,
  'RS_fine': 0.030518043793335892,
- 'SDL': -305.02784771496158,
- 'SDP': -283.60418097199977,
+ 'SDL': -326.02426184481578,
+ 'SDP': 0.030518043793335892,
  'SDP_fine': 0.030518043793335892,
- 'SDR': -214.99961852445244,
- 'T': -95.857175555046979,
+ 'SDR': -389.99008163576718,
+ 'T': -95.796139467460307,
  'bias_1': 0.030518043793335892,
- 'bias_2': 0.030518043793335892,
+ 'bias_2': -499.97711146715505,
  'bias_3': 0.030518043793335892,
  'bias_4': 0.030518043793335892}
 
+
+
+#%% reset gates to basevalues
 activegates = basevalues.keys()
 gates.resetgates(activegates, basevalues)
