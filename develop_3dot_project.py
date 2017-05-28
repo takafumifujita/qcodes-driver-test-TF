@@ -51,7 +51,7 @@ if __name__=='__main__' and 1:
         dataset.location = dataset.location_provider(dataset.default_io, record={'name': name})
         dataset.write()
 
-#%% defining virtual gates
+#%% defining virtual gates %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 from collections import OrderedDict
 
 #L = {'P1': 1, 'P2': .454, 'P3': .19, 'D1': 1.535, 'D2': .460, 'LS': 1.020, 'RS': .167}
@@ -69,6 +69,7 @@ from collections import OrderedDict
 L = OrderedDict([('P1', 1), ('P2', .481), ('P3', .194), ('D1', 1.224), ('D2', .380), ('LS', 0.843), ('RS', .110)])
 M = OrderedDict([('P1', .540), ('P2', 1), ('P3', .414), ('D1', 1.295), ('D2', .942), ('LS', .330), ('RS', .269)])
 R = OrderedDict([('P1', .208), ('P2', .503), ('P3', 1.25), ('D1', .394), ('D2', 1.189), ('LS', .073), ('RS', 0.914)])
+#R = OrderedDict([('P1', 0), ('P2', 0), ('P3', 1), ('D1', 0), ('D2', 0), ('LS', 0), ('RS', 0)])
 t1 = OrderedDict([('P1', 0), ('P2', 0), ('P3', 0), ('D1', 1), ('D2', 0), ('LS', 0), ('RS', 0)])
 t2 = OrderedDict([('P1', 0), ('P2', 0), ('P3', 0), ('D1', 0), ('D2', 1), ('LS', 0), ('RS', 0)])
 t_L = OrderedDict([('P1', 0), ('P2', 0), ('P3', 0), ('D1', 0), ('D2', 0), ('LS', 1), ('RS', 0)])
@@ -265,7 +266,7 @@ if __name__ == '__main__' and 1:
     RF.off()
 
     if 0:
-        diff_dir = 'y'
+        diff_dir = 'x'
         imx = qtt.diffImageSmooth(alldata.measured.ndarray, dy=diff_dir)
         data_arr = qcodes.DataArray(name='diff', label='diff', array_id='diff', set_arrays=alldata.measured.set_arrays, preset_data=imx)
         alldata.add_array(data_arr)
@@ -612,7 +613,7 @@ gates.P2.set(gates.P2.get()+Dot_epsilon['P2']*x)
 gates.P3.set(gates.P3.get()+Dot_epsilon['P3']*x)
 
 #%% mu
-x = -10
+x = 4
 gates.P1.set(gates.P1.get()+Dot_mu['P1']*x)
 gates.P2.set(gates.P2.get()+Dot_mu['P2']*x)
 gates.P3.set(gates.P3.get()+Dot_mu['P3']*x)
@@ -644,7 +645,7 @@ gates.P3.set(gates.P3.get()+Dot_t_L['P3']*x)
 gates.allvalues()
 
 #%% tuning t_R
-x = 80
+x = -5
 gates.RS.set(gates.RS.get()+Dot_t_R['RS']*x)
 gates.P1.set(gates.P1.get()+Dot_t_R['P1']*x)
 gates.P2.set(gates.P2.get()+Dot_t_R['P2']*x)
@@ -664,13 +665,13 @@ gates.P2.set(gates.P2.get()+mu_M_inv['P2']*x)
 gates.P3.set(gates.P3.get()+mu_M_inv['P3']*x)
 
 #%% R
-x = 30
+x = -5
 gates.P1.set(gates.P1.get()+mu_R_inv['P1']*x)
 gates.P2.set(gates.P2.get()+mu_R_inv['P2']*x)
 gates.P3.set(gates.P3.get()+mu_R_inv['P3']*x)
 
 #%% sensing dot
-x = -3
+x = 2
 gates.SDP.set(gates.SDP.get() + x)
 
 #%% LS,RS?
@@ -753,3 +754,5 @@ basevalues = {'D1': 0.030518043793335892,
 #%% reset gates to basevalues
 activegates = basevalues.keys()
 gates.resetgates(activegates, basevalues)
+
+
